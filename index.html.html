@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENSOMap Analyst Riau</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .file-input-label {
+            display: block;
+            padding: 1rem;
+            border: 2px dashed #d1d5db;
+            border-radius: 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .file-input-label:hover {
+            background-color: #f9fafb;
+            border-color: #3b82f6;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .prose table { width: 100%; }
+        .prose th, .prose td { border: 1px solid #e5e7eb; padding: 0.5rem 1rem; }
+        .prose th { background-color: #f9fafb; }
+        .prose ul { list-style-type: disc; margin-left: 1.5rem; }
+        .prose ol { list-style-type: decimal; margin-left: 1.5rem; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-5xl">
+        
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">ENSOMap Analyst</h1>
+            <p class="mt-2 text-lg text-gray-600">Analisis Dampak ENSO di Riau Secara Otomatis</p>
+            <p class="mt-1 text-sm text-gray-500">Unggah data numerik (CSV) & peta komposit (Gambar) untuk mendapatkan narasi analisis klimatologis.</p>
+        </header>
+
+        <!-- Input API Key -->
+        <div class="bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
+            <h2 class="text-xl font-semibold mb-3 text-gray-800">Langkah 1: Masukkan Kunci API</h2>
+            <p class="text-sm text-gray-600 mb-4">Aplikasi ini menggunakan model AI dari Google. Anda memerlukan API Key gratis dari Google AI Studio untuk dapat menjalankan analisis. Kunci ini hanya digunakan di browser Anda dan tidak disimpan di mana pun.</p>
+            <input type="password" id="apiKeyInput" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Masukkan Google API Key Anda di sini...">
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-blue-600 hover:underline mt-2 inline-block">Bagaimana cara mendapatkan API Key?</a>
+        </div>
+
+        <!-- Area Upload File -->
+        <div class="bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Langkah 2: Unggah File Anda</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Upload CSV -->
+                <div>
+                    <label for="csvFile" class="file-input-label" id="csvLabel">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                        <span class="mt-2 block text-sm font-medium text-gray-900">Unggah File Data Komposit (.csv)</span>
+                        <span class="mt-1 block text-xs text-gray-500" id="csvFileName">Belum ada file dipilih</span>
+                    </label>
+                    <input type="file" id="csvFile" class="hidden" accept=".csv">
+                </div>
+                <!-- Upload Gambar -->
+                <div>
+                    <label for="imageFile" class="file-input-label" id="imageLabel">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                        <span class="mt-2 block text-sm font-medium text-gray-900">Unggah Peta Komposit (.jpg, .png)</span>
+                        <span class="mt-1 block text-xs text-gray-500" id="imageFileName">Belum ada file dipilih</span>
+                    </label>
+                    <input type="file" id="imageFile" class="hidden" accept="image/jpeg, image/png">
+                </div>
+            </div>
+        </div>
+
+        <!-- Tombol Analisis Utama -->
+        <button id="analyzeButton" class="w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all text-lg shadow-lg">
+            🚀 Buat Analisis Utama
+        </button>
+
+        <!-- Area Hasil -->
+        <div id="resultArea" class="mt-8 bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-gray-200 hidden">
+            <div id="loadingSpinner" class="flex flex-col items-center justify-center py-10 hidden">
+                <div class="spinner"></div>
+                <p class="mt-4 text-gray-600">Harap tunggu, sedang menganalisis data dan gambar...</p>
+            </div>
+            <div id="analysisContent">
+                <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-4">Hasil Analisis Dampak ENSO</h2>
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4">Peta Komposit yang Dianalisis</h3>
+                    <img id="resultImage" src="" alt="Peta Komposit Hasil Upload" class="rounded-lg shadow-md border w-full">
+                </div>
+                <div id="analysisText" class="prose prose-lg max-w-none"></div>
+                
+                <!-- Fitur Tambahan Gemini -->
+                <div id="geminiFeatures" class="mt-10 pt-6 border-t border-gray-200 hidden">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">✨ Fitur Analisis Lanjutan</h3>
+                    <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                        <button id="summarizeButton" class="flex-1 bg-green-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all shadow">✨ Ringkas Analisis</button>
+                        <button id="recommendButton" class="flex-1 bg-indigo-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all shadow">✨ Buat Rekomendasi</button>
+                        <button id="tableButton" class="flex-1 bg-gray-700 text-white font-bold py-3 px-5 rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-300 transition-all shadow">📊 Buat Tabel Rekapitulasi</button>
+                    </div>
+                    <div id="secondaryLoadingSpinner" class="flex items-center justify-center py-6 hidden">
+                        <div class="spinner"></div>
+                        <p class="ml-4 text-gray-600">Memproses permintaan...</p>
+                    </div>
+                    <div id="summaryResult" class="p-4 bg-gray-100 rounded-lg hidden prose max-w-none mt-4"></div>
+                    <div id="recommendResult" class="p-4 bg-gray-100 rounded-lg hidden prose max-w-none mt-4"></div>
+                    <div id="tableResult" class="p-4 bg-gray-100 rounded-lg hidden prose max-w-none mt-4"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pesan Error -->
+        <div id="errorBox" class="mt-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg hidden" role="alert">
+            <p class="font-bold">Terjadi Kesalahan</p>
+            <p id="errorMessage"></p>
+        </div>
+    </div>
+
+    <script type="module">
+        // Global state
+        let mainAnalysisText = "";
+        let csvDataText = "";
+
+        // Mengambil elemen-elemen dari DOM
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const csvFileInput = document.getElementById('csvFile');
+        const imageFileInput = document.getElementById('imageFile');
+        const csvFileName = document.getElementById('csvFileName');
+        const imageFileName = document.getElementById('imageFileName');
+        const analyzeButton = document.getElementById('analyzeButton');
+        const resultArea = document.getElementById('resultArea');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const analysisContent = document.getElementById('analysisContent');
+        const resultImage = document.getElementById('resultImage');
+        const analysisText = document.getElementById('analysisText');
+        const errorBox = document.getElementById('errorBox');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Elemen Fitur Tambahan
+        const geminiFeatures = document.getElementById('geminiFeatures');
+        const summarizeButton = document.getElementById('summarizeButton');
+        const recommendButton = document.getElementById('recommendButton');
+        const tableButton = document.getElementById('tableButton');
+        const secondaryLoadingSpinner = document.getElementById('secondaryLoadingSpinner');
+        const summaryResult = document.getElementById('summaryResult');
+        const recommendResult = document.getElementById('recommendResult');
+        const tableResult = document.getElementById('tableResult');
+
+        // Event listeners untuk upload file
+        csvFileInput.addEventListener('change', () => { csvFileName.textContent = csvFileInput.files[0]?.name || 'Belum ada file dipilih'; });
+        imageFileInput.addEventListener('change', () => { imageFileName.textContent = imageFileInput.files[0]?.name || 'Belum ada file dipilih'; });
+
+        // Fungsi pembaca file
+        const readFileAsText = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsText(file);
+        });
+
+        const readFileAsBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+
+        // Fungsi untuk memanggil Gemini API
+        async function callGemini(apiKey, prompt, imageParts = null) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+            
+            let parts = [{ text: prompt }];
+            if (imageParts) {
+                parts.push(imageParts);
+            }
+
+            const payload = { contents: [{ parts }] };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'Gagal menghubungi API Google.');
+            }
+
+            const data = await response.json();
+            if (!data.candidates || !data.candidates[0].content.parts[0].text) {
+                throw new Error("Respons dari API tidak valid atau kosong.");
+            }
+            return data.candidates[0].content.parts[0].text;
+        }
+        
+        // Event listener untuk tombol analisis utama
+        analyzeButton.addEventListener('click', async () => {
+            errorBox.classList.add('hidden');
+            resultArea.classList.add('hidden');
+            geminiFeatures.classList.add('hidden');
+            summaryResult.classList.add('hidden');
+            recommendResult.classList.add('hidden');
+            tableResult.classList.add('hidden');
+            
+            const apiKey = apiKeyInput.value.trim();
+            const csvFile = csvFileInput.files[0];
+            const imageFile = imageFileInput.files[0];
+
+            if (!apiKey || !csvFile || !imageFile) {
+                showError("Mohon masukkan Kunci API dan unggah kedua file (CSV dan Gambar).");
+                return;
+            }
+
+            resultArea.classList.remove('hidden');
+            loadingSpinner.classList.remove('hidden');
+            analysisContent.classList.add('hidden');
+
+            try {
+                csvDataText = await readFileAsText(csvFile);
+                const imageBase64 = await readFileAsBase64(imageFile);
+                const imageMimeType = imageFile.type;
+                const imageParts = { inline_data: { mime_type: imageMimeType, data: imageBase64 } };
+
+                const mainPrompt = `
+                    Anda adalah seorang analis klimatologi ahli dari BMKG. Tugas Anda adalah membuat analisis komparatif yang tajam dan ringkas berdasarkan data dan peta yang diberikan.
+                    Berikut adalah data numerik hasil analisis komposit dalam format CSV:
+                    --- DATA CSV ---
+                    ${csvDataText}
+                    --- AKHIR DATA CSV ---
+                    Berikut adalah gambar peta komposit yang sesuai dengan data di atas.
+                    **Tugas Anda:**
+                    1. Sintesiskan informasi dari data numerik (CSV) dan data spasial (Gambar). Perhatikan kolom anomali persentase dan kolom signifikansi (HipEL, HipLA, di mana 1=signifikan, 0=tidak).
+                    2. Bandingkan dampak antara El Niño dan La Niña.
+                    3. Jelaskan pola yang terlihat, termasuk anomali atau temuan menarik.
+                    4. Sebutkan implikasi praktis dari temuan tersebut untuk mitigasi bencana (karhutla, banjir) atau sektor lain.
+                    5. Gunakan format laporan yang terstruktur dengan sub-judul (contoh: Dampak El Niño, Dampak La Niña, Analisis Komparatif, Implikasi Praktis). Gunakan **Markdown** untuk format.
+                    6. Gunakan bahasa Indonesia yang baku, profesional, dan jelas.
+                    Mulai analisis Anda sekarang.`;
+                
+                mainAnalysisText = await callGemini(apiKey, mainPrompt, imageParts);
+                displayResults(mainAnalysisText, imageFile);
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                loadingSpinner.classList.add('hidden');
+            }
+        });
+
+        // Event listener untuk fitur tambahan
+        summarizeButton.addEventListener('click', () => handleSecondaryAnalysis('summary'));
+        recommendButton.addEventListener('click', () => handleSecondaryAnalysis('recommendations'));
+        tableButton.addEventListener('click', () => handleSecondaryAnalysis('table'));
+
+        async function handleSecondaryAnalysis(type) {
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) {
+                showError("Kunci API tidak boleh kosong.");
+                return;
+            }
+
+            secondaryLoadingSpinner.classList.remove('hidden');
+            summaryResult.classList.add('hidden');
+            recommendResult.classList.add('hidden');
+            tableResult.classList.add('hidden');
+
+            let prompt;
+            let targetElement;
+
+            if (type === 'summary') {
+                if (!mainAnalysisText) { showError("Analisis utama harus dibuat terlebih dahulu."); return; }
+                prompt = `Anda adalah asisten ahli. Ringkas teks analisis klimatologi berikut menjadi satu paragraf singkat yang padat informasi untuk laporan eksekutif. Teksnya adalah:\n\n---\n${mainAnalysisText}\n---`;
+                targetElement = summaryResult;
+            } else if (type === 'recommendations') {
+                if (!mainAnalysisText) { showError("Analisis utama harus dibuat terlebih dahulu."); return; }
+                prompt = `Anda adalah konsultan strategis untuk pemerintah daerah. Berdasarkan analisis klimatologi berikut, buatlah daftar poin-poin rekomendasi yang jelas dan dapat ditindaklanjuti untuk berbagai pemangku kepentingan (misalnya BPBD, Dinas Pertanian, Dinas PUPR). Gunakan format markdown bullet points. Teks analisisnya adalah:\n\n---\n${mainAnalysisText}\n---`;
+                targetElement = recommendResult;
+            } else { // table
+                if (!csvDataText) { showError("Data CSV belum diunggah."); return; }
+                prompt = `Anda adalah analis data. Berdasarkan data CSV berikut, buatlah tabel rekapitulasi dalam format Markdown. Tabel harus memiliki tiga kolom: 'Zona Musim (ZOM BARU)', 'Perubahan saat El Niño (%)', dan 'Perubahan saat La Niña (%)'. Ambil data dari kolom yang sesuai di CSV. Bulatkan nilai persentase menjadi dua angka di belakang koma dan tambahkan simbol '%'. Data CSV nya adalah:\n\n---\n${csvDataText}\n---`;
+                targetElement = tableResult;
+            }
+
+            try {
+                const resultText = await callGemini(apiKey, prompt);
+                targetElement.innerHTML = marked.parse(resultText);
+                targetElement.classList.remove('hidden');
+            } catch (err) {
+                showError(`Gagal membuat ${type}: ${err.message}`);
+            } finally {
+                secondaryLoadingSpinner.classList.add('hidden');
+            }
+        }
+
+        function displayResults(text, imageFile) {
+            analysisContent.classList.remove('hidden');
+            resultImage.src = URL.createObjectURL(imageFile);
+            analysisText.innerHTML = marked.parse(text);
+            geminiFeatures.classList.remove('hidden');
+        }
+
+        function showError(message) {
+            loadingSpinner.classList.add('hidden');
+            errorMessage.textContent = message;
+            errorBox.classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
